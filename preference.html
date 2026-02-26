@@ -325,7 +325,9 @@
     let supabase = null;
     if (window.APP_CONFIG && window.APP_CONFIG.supabaseUrl && window.APP_CONFIG.supabaseAnonKey) {
       try {
-        supabase = window.supabase.createClient(window.APP_CONFIG.supabaseUrl, window.APP_CONFIG.supabaseAnonKey);
+        if (window.supabase && typeof window.supabase.createClient === 'function') {
+          supabase = window.supabase.createClient(window.APP_CONFIG.supabaseUrl, window.APP_CONFIG.supabaseAnonKey);
+        }
       } catch (e) { console.warn('Supabase init failed', e); }
     }
 
@@ -397,25 +399,8 @@
       const ext = name.split('.').pop();
       const reader = new FileReader();
 
-      // CSV：用 SheetJS 解析，并指定中文编码；然后只抽取你关心的几列
-      if (ext === 'csv') {
-        reader.onload = function (evt) {
-          try {
-            const binary = evt.target.result || '';
-            const workbook = XLSX.read(binary, { type: 'binary', codepage: 936 });
-            const firstSheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[firstSheetName];
-            // 先转成二维数组，自己找真正的表头行
-            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-            const parsed = extractPreferredColumnsFromRows(rows);
-            fabricRows = parsed.rows;
-            fabricColumns = parsed.columns;
-          } catch (err) {
-            console.error('解析 CSV 失败', err);
-            alert('无法解析 CSV，请确认：1）是标准逗号分隔；2）第一行为表头；3）文件未加密或损坏。');
-            return;
-          }
-
+      function applyResult() {
+        try {
           renderFabricTable();
           fabricCountEl.textContent = fabricRows.length + ' 条';
           noFabricHint.style.display = fabricRows.length ? 'none' : 'block';
@@ -424,44 +409,61 @@
           saveToServer(fabricRows, fabricColumns);
           noFabricHint.textContent = fabricRows.length ? '已保存到服务器，其他设备或浏览器打开本页即可看到。' : '还没有上传布料表格。';
           if (fabricRows.length) noFabricHint.style.display = 'block';
+        } catch (err) {
+          console.error('更新界面失败', err);
+          alert('处理成功但更新界面时出错：' + (err && err.message ? err.message : String(err)));
+        }
+      }
+
+      // CSV：用 SheetJS 解析（用 ArrayBuffer 读取，避免 readAsBinaryString 在某些环境不可用）
+      if (ext === 'csv') {
+        reader.onload = function (evt) {
+          try {
+            const data = evt.target.result;
+            const binary = arrayBufferToBinaryString(data);
+            const workbook = XLSX.read(binary, { type: 'binary', codepage: 936 });
+            const firstSheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[firstSheetName];
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+            const parsed = extractPreferredColumnsFromRows(rows);
+            fabricRows = parsed.rows;
+            fabricColumns = parsed.columns;
+          } catch (err) {
+            console.error('解析 CSV 失败', err);
+            alert('无法解析 CSV：' + (err && err.message ? err.message : '请确认文件格式正确、第一行为表头。'));
+            return;
+          }
+          applyResult();
         };
-        reader.readAsBinaryString(file);
+        reader.readAsArrayBuffer(file);
         return;
       }
 
       // Excel：优先用 ArrayBuffer 解析，失败再降级为 binaryString
       reader.onload = function (evt) {
-        const data = evt.target.result;
-        let workbook = null;
-
         try {
-          workbook = XLSX.read(data, { type: 'array' });
-        } catch (err1) {
-          console.warn('ArrayBuffer 方式解析失败，尝试 binaryString', err1);
+          const data = evt.target.result;
+          let workbook = null;
+
           try {
+            workbook = XLSX.read(data, { type: 'array' });
+          } catch (err1) {
+            console.warn('ArrayBuffer 方式解析失败，尝试 binaryString', err1);
             const binary = arrayBufferToBinaryString(data);
             workbook = XLSX.read(binary, { type: 'binary' });
-          } catch (err2) {
-            console.error('解析 Excel 失败', err2);
-            alert('无法解析文件，请确认：1）是 .xlsx/.xls 格式；2）没有设置打开密码；3）不是被加密或损坏的文件。');
-            return;
           }
+
+          const firstSheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[firstSheetName];
+          const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+          fabricRows = json;
+          fabricColumns = normalizeColumns(json);
+
+          applyResult();
+        } catch (err) {
+          console.error('解析 Excel 失败', err);
+          alert('无法解析文件：' + (err && err.message ? err.message : '请确认是 .xlsx/.xls 格式、未加密。'));
         }
-
-        const firstSheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[firstSheetName];
-        const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-        fabricRows = json;
-        fabricColumns = normalizeColumns(json);
-
-        renderFabricTable();
-        fabricCountEl.textContent = fabricRows.length + ' 条';
-        noFabricHint.style.display = fabricRows.length ? 'none' : 'block';
-        noRecommendHint.textContent = '还没有生成推荐。填写客户信息后点击“生成推荐布料”。';
-        recommendList.innerHTML = '';
-        saveToServer(fabricRows, fabricColumns);
-        noFabricHint.textContent = fabricRows.length ? '已保存到服务器，其他设备或浏览器打开本页即可看到。' : '还没有上传布料表格。';
-        if (fabricRows.length) noFabricHint.style.display = 'block';
       };
 
       reader.readAsArrayBuffer(file);
