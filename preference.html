@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>面料客户喜好偏向推荐</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #fdf8f3;
+      --card: #fffbf7;
+      --accent: #c45c3e;
+      --accent-soft: #e8a090;
+      --text: #2c2c2c;
+      --text-soft: #5c5c5c;
+      --border: #ecd9d0;
+      --shadow: rgba(196, 92, 62, 0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+      display: grid;
+      grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.4fr);
+      gap: 20px;
+    }
+    header {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 16px 0 12px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-family: "Noto Serif SC", serif;
+      font-size: 1.4rem;
+      color: var(--accent);
+    }
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--text-soft);
+      margin-top: 6px;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 18px 16px;
+      box-shadow: 0 4px 18px var(--shadow);
+      border: 1px solid var(--border);
+      min-width: 0;
+    }
+    .card h2 {
+      font-family: "Noto Serif SC", serif;
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+    }
+    .field-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .field {
+      flex: 1 1 150px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85rem;
+    }
+    label {
+      color: var(--text-soft);
+    }
+    input, select, textarea {
+      font: inherit;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #fffaf5;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent-soft);
+      box-shadow: 0 0 0 2px rgba(196,92,62,0.12);
+    }
+    textarea { resize: vertical; min-height: 70px; }
+    .btn {
+      font-family: inherit;
+      font-size: 0.9rem;
+      padding: 9px 16px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.12s, box-shadow 0.12s, background 0.12s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 10px var(--shadow);
+    }
+    .btn-primary:hover {
+      box-shadow: 0 4px 14px rgba(196,92,62,0.24);
+    }
+    .btn-secondary {
+      background: var(--card);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    .upload-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .hint {
+      font-size: 0.8rem;
+      color: var(--text-soft);
+      margin-top: 2px;
+    }
+    .table-wrap {
+      margin-top: 8px;
+      max-height: 420px;
+      overflow: auto;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fffaf5;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      min-width: 900px;
+    }
+    th, td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #f0e1d7;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: #f7ece2;
+      font-weight: 600;
+      text-align: left;
+      z-index: 1;
+    }
+    tr:nth-child(even) td {
+      background: #fff7f0;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      background: #f7ece2;
+      color: var(--text-soft);
+      margin-left: 4px;
+    }
+    .recommend-list {
+      margin-top: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .recommend-item {
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px dashed var(--border);
+      font-size: 0.85rem;
+    }
+    .recommend-title {
+      font-weight: 600;
+      margin-bottom: 3px;
+      color: var(--accent);
+    }
+    .score {
+      font-size: 0.75rem;
+      color: var(--text-soft);
+    }
+    .no-data {
+      font-size: 0.8rem;
+      color: var(--text-soft);
+      margin-top: 8px;
+    }
+    .small-tag {
+      display: inline-block;
+      padding: 1px 6px;
+      margin-right: 4px;
+      margin-top: 2px;
+      border-radius: 999px;
+      background: #f7ece2;
+      font-size: 0.72rem;
+      color: var(--text-soft);
+    }
+    @media (max-width: 820px) {
+      .container {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>面料客户喜好偏向 · 推荐助手</h1>
+      <p class="subtitle">上传你的布料表格，记录客户偏好，一键生成推荐布料清单</p>
+    </header>
+
+    <section class="card">
+      <h2>① 上传布料产品表格</h2>
+      <div class="upload-row">
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
+        <button class="btn btn-secondary" id="clearDataBtn">清空数据</button>
+      </div>
+      <p class="hint">
+        建议表头包含：<b>布料名称 / 适用品类 / 成分 / 克重 / 手感 / 颜色 / 备注</b> 等字段，表头第一行为字段名。<br/>
+        支持 Excel（.xlsx / .xls）和 CSV。
+      </p>
+      <div id="tableContainer" class="table-wrap" style="display:none;"></div>
+      <p id="noFabricHint" class="no-data">还没有上传布料表格。</p>
+    </section>
+
+    <section class="card">
+      <h2>② 客户信息 & 喜好</h2>
+      <div class="field-row">
+        <div class="field">
+          <label>客户名字</label>
+          <input id="customerName" placeholder="例如：张小姐" />
+        </div>
+        <div class="field">
+          <label>公司名称</label>
+          <input id="companyName" placeholder="例如：XX 服装工作室" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>职位</label>
+          <input id="position" placeholder="例如：设计师 / 采购" />
+        </div>
+        <div class="field">
+          <label>衣服的种类</label>
+          <select id="clothingType">
+            <option value="">请选择或手动输入</option>
+            <option>连衣裙</option>
+            <option>衬衫</option>
+            <option>T 恤</option>
+            <option>西装外套</option>
+            <option>裤子</option>
+            <option>半裙</option>
+            <option>大衣 / 风衣</option>
+            <option>家居服 / 睡衣</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>衣服种类补充（可手动输入）</label>
+        <input id="clothingTypeFree" placeholder="例如：旗袍、中长连衣裙、 oversize 衬衫…" />
+      </div>
+      <div class="field" style="margin-top:10px;">
+        <label>客户喜好偏向（越详细越好）</label>
+        <textarea id="preferenceText" placeholder="例如：偏爱垂感好、微微光泽、不要太透、夏季不闷热，颜色偏奶白 /雾霾蓝…"></textarea>
+        <p class="hint">
+          你可以写：手感（柔软/挺括）、垂感、光泽、厚薄、是否弹力、有无纹理、价格区间、适合季节等。
+        </p>
+      </div>
+
+      <div class="field-row" style="margin-top:10px; align-items:flex-end;">
+        <div class="field">
+          <label>推荐数量</label>
+          <select id="topN">
+            <option value="3">推荐 3 款</option>
+            <option value="5">推荐 5 款</option>
+            <option value="8">推荐 8 款</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="recommendBtn">生成推荐布料</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div>
+          <span style="font-size:0.85rem; color:var(--text-soft);">
+            当前已载入布料：
+            <span id="fabricCount" class="badge">0 条</span>
+          </span>
+        </div>
+
+        <div id="recommendList" class="recommend-list"></div>
+        <p id="noRecommendHint" class="no-data">还没有生成推荐。填写客户信息后点击“生成推荐布料”。</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let fabricRows = [];
+    let fabricColumns = [];
+
+    const fileInput = document.getElementById('fileInput');
+    const tableContainer = document.getElementById('tableContainer');
+    const noFabricHint = document.getElementById('noFabricHint');
+    const fabricCountEl = document.getElementById('fabricCount');
+    const clearDataBtn = document.getElementById('clearDataBtn');
+    const recommendBtn = document.getElementById('recommendBtn');
+    const recommendList = document.getElementById('recommendList');
+    const noRecommendHint = document.getElementById('noRecommendHint');
+
+    fileInput.addEventListener('change', handleFile);
+    clearDataBtn.addEventListener('click', () => {
+      fabricRows = [];
+      fabricColumns = [];
+      tableContainer.innerHTML = '';
+      tableContainer.style.display = 'none';
+      fabricCountEl.textContent = '0 条';
+      noFabricHint.style.display = 'block';
+      recommendList.innerHTML = '';
+      noRecommendHint.textContent = '还没有上传布料表格。';
+    });
+
+    recommendBtn.addEventListener('click', () => {
+      if (!fabricRows.length) {
+        alert('请先上传布料产品表格。');
+        return;
+      }
+      const recs = calculateRecommendations();
+      renderRecommendations(recs);
+      renderFabricTableForRecs(recs);
+    });
+
+    function handleFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const name = (file.name || '').toLowerCase();
+      const ext = name.split('.').pop();
+      const reader = new FileReader();
+
+      // CSV：用 SheetJS 解析，并指定中文编码；然后只抽取你关心的几列
+      if (ext === 'csv') {
+        reader.onload = function (evt) {
+          try {
+            const binary = evt.target.result || '';
+            const workbook = XLSX.read(binary, { type: 'binary', codepage: 936 });
+            const firstSheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[firstSheetName];
+            // 先转成二维数组，自己找真正的表头行
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+            const parsed = extractPreferredColumnsFromRows(rows);
+            fabricRows = parsed.rows;
+            fabricColumns = parsed.columns;
+          } catch (err) {
+            console.error('解析 CSV 失败', err);
+            alert('无法解析 CSV，请确认：1）是标准逗号分隔；2）第一行为表头；3）文件未加密或损坏。');
+            return;
+          }
+
+          renderFabricTable();
+          fabricCountEl.textContent = fabricRows.length + ' 条';
+          noFabricHint.style.display = fabricRows.length ? 'none' : 'block';
+          noRecommendHint.textContent = '还没有生成推荐。填写客户信息后点击“生成推荐布料”。';
+          recommendList.innerHTML = '';
+        };
+        reader.readAsBinaryString(file);
+        return;
+      }
+
+      // Excel：优先用 ArrayBuffer 解析，失败再降级为 binaryString
+      reader.onload = function (evt) {
+        const data = evt.target.result;
+        let workbook = null;
+
+        try {
+          workbook = XLSX.read(data, { type: 'array' });
+        } catch (err1) {
+          console.warn('ArrayBuffer 方式解析失败，尝试 binaryString', err1);
+          try {
+            const binary = arrayBufferToBinaryString(data);
+            workbook = XLSX.read(binary, { type: 'binary' });
+          } catch (err2) {
+            console.error('解析 Excel 失败', err2);
+            alert('无法解析文件，请确认：1）是 .xlsx/.xls 格式；2）没有设置打开密码；3）不是被加密或损坏的文件。');
+            return;
+          }
+        }
+
+        const firstSheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[firstSheetName];
+        const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        fabricRows = json;
+        fabricColumns = normalizeColumns(json);
+
+        renderFabricTable();
+        fabricCountEl.textContent = fabricRows.length + ' 条';
+        noFabricHint.style.display = fabricRows.length ? 'none' : 'block';
+        noRecommendHint.textContent = '还没有生成推荐。填写客户信息后点击“生成推荐布料”。';
+        recommendList.innerHTML = '';
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    // 只保留你关心的列：商品编号 / 商品名称 / 规格型号 / 商品类别 / 备注
+    function normalizeColumns(rows) {
+      const preferred = ['商品编码','商品编号','商品名称','规格型号','商品类别','备注'];
+      if (!rows || !rows.length) return [];
+      const row0 = rows[0] || {};
+      const cols = preferred.filter(k => Object.prototype.hasOwnProperty.call(row0, k));
+      if (cols.length) return cols;
+      // 如果首行没匹配到这些表头，就退回到自动推断
+      return inferColumns(rows);
+    }
+
+    // 从二维数组中抽取你关心的几列（应对“商品信息 + __EMPTY”这种情况）
+    function extractPreferredColumnsFromRows(rows) {
+      const targetMap = {
+        '商品编号': ['商品编码','商品编号','编号','货号'],
+        '商品名称': ['商品名称','品名','名称'],
+        '规格型号': ['规格型号','规格','型号'],
+        '商品类别': ['商品类别','类别','品类'],
+        '备注':     ['备注','说明','备注信息']
+      };
+
+      if (!rows || !rows.length) {
+        return { rows: [], columns: [] };
+      }
+
+      // 找到真正的表头行：包含“商品编码/商品编号/商品名称”等关键字的那一行
+      let headerIndex = -1;
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const hasKey = r.some(cell => {
+          const v = String(cell || '').trim();
+          if (!v) return false;
+          return ['商品编码','商品编号','商品名称','规格型号','商品类别','备注'].includes(v);
+        });
+        if (hasKey) {
+          headerIndex = i;
+          break;
+        }
+      }
+
+      if (headerIndex === -1) {
+        // 找不到表头，就全部丢给 sheet_to_json 的默认逻辑
+        return { rows: [], columns: [] };
+      }
+
+      const headerRow = rows[headerIndex].map(c => String(c || '').trim());
+      const colIndexByTarget = {};
+
+      Object.keys(targetMap).forEach(target => {
+        const aliases = targetMap[target];
+        let found = -1;
+        for (let i = 0; i < headerRow.length; i++) {
+          const h = headerRow[i];
+          if (aliases.includes(h)) {
+            found = i;
+            break;
+          }
+        }
+        if (found >= 0) {
+          colIndexByTarget[target] = found;
+        }
+      });
+
+      const usedTargets = Object.keys(colIndexByTarget);
+      if (!usedTargets.length) {
+        return { rows: [], columns: [] };
+      }
+
+      const dataRows = [];
+      for (let i = headerIndex + 1; i < rows.length; i++) {
+        const arr = rows[i];
+        // 如果这一行所有单元格都是空的，就跳过
+        const allEmpty = !arr || arr.every(v => String(v || '').trim() === '');
+        if (allEmpty) continue;
+
+        const obj = {};
+        usedTargets.forEach(target => {
+          const idx = colIndexByTarget[target];
+          obj[target] = arr[idx] != null ? String(arr[idx]) : '';
+        });
+        dataRows.push(obj);
+      }
+
+      return { rows: dataRows, columns: usedTargets };
+    }
+
+    function arrayBufferToBinaryString(buf) {
+      const bytes = new Uint8Array(buf);
+      let binary = '';
+      const chunkSize = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode.apply(
+          null,
+          bytes.subarray(i, i + chunkSize)
+        );
+      }
+      return binary;
+    }
+
+    function inferColumns(rows) {
+      if (!rows.length) return [];
+      const colsSet = new Set();
+      rows.forEach(row => {
+        Object.keys(row).forEach(k => colsSet.add(k));
+      });
+      return Array.from(colsSet);
+    }
+
+    function renderFabricTable() {
+      if (!fabricRows.length) {
+        tableContainer.innerHTML = '';
+        tableContainer.style.display = 'none';
+        return;
+      }
+      const cols = fabricColumns;
+      let html = '<table><thead><tr>';
+      cols.forEach(c => {
+        html += '<th>' + escapeHtml(String(c)) + '</th>';
+      });
+      html += '</tr></thead><tbody>';
+
+      fabricRows.forEach(row => {
+        html += '<tr>';
+        cols.forEach(c => {
+          const val = row[c] ?? '';
+          html += '<td>' + escapeHtml(String(val)) + '</td>';
+        });
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+
+      tableContainer.innerHTML = html;
+      tableContainer.style.display = 'block';
+    }
+
+    // 只显示推荐的几条布料（根据原始行索引）
+    function renderFabricTableForRecs(recs) {
+      if (!recs || !recs.length) {
+        renderFabricTable();
+        return;
+      }
+      const cols = fabricColumns;
+      if (!cols.length) {
+        renderFabricTable();
+        return;
+      }
+
+      let html = '<table><thead><tr>';
+      cols.forEach(c => {
+        html += '<th>' + escapeHtml(String(c)) + '</th>';
+      });
+      html += '</tr></thead><tbody>';
+
+      recs.forEach(rec => {
+        const row = fabricRows[rec.index] || {};
+        html += '<tr>';
+        cols.forEach(c => {
+          const val = row[c] ?? '';
+          html += '<td>' + escapeHtml(String(val)) + '</td>';
+        });
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+
+      tableContainer.innerHTML = html;
+      tableContainer.style.display = 'block';
+      fabricCountEl.textContent = recs.length + ' 条（推荐）';
+    }
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function calculateRecommendations() {
+      const clothingTypeSelect = (document.getElementById('clothingType').value || '').trim();
+      const clothingTypeFree = (document.getElementById('clothingTypeFree').value || '').trim();
+      const preferenceText = (document.getElementById('preferenceText').value || '').trim();
+      const topN = parseInt(document.getElementById('topN').value || '3', 10);
+
+      const clothingType = (clothingTypeFree || clothingTypeSelect).toLowerCase();
+      const preference = preferenceText.toLowerCase();
+
+      const keywordWeights = [
+        { kw: ['柔软','软糯','软'], key: 'soft', weight: 3 },
+        { kw: ['挺括','有型','硬挺'], key: 'crisp', weight: 3 },
+        { kw: ['垂感','垂坠','顺滑'], key: 'drape', weight: 3 },
+        { kw: ['光泽','丝滑','缎面','闪'], key: 'shine', weight: 3 },
+        { kw: ['透气','清爽','夏天','夏季'], key: 'summer', weight: 3 },
+        { kw: ['保暖','秋冬','冬季','厚实'], key: 'winter', weight: 3 },
+        { kw: ['亲肤','不扎','不刺'], key: 'skin', weight: 2 },
+        { kw: ['弹力','弹性','有弹'], key: 'stretch', weight: 2 },
+        { kw: ['天然','棉','麻','真丝'], key: 'natural', weight: 2 },
+        { kw: ['容易打理','免烫','不易皱'], key: 'easycare', weight: 2 }
+      ];
+
+      const nameKeys = ['商品名称','布料名称','品名','名称','name'];
+      const codeKeys = ['商品编号','编号','货号','sku','code'];
+      const typeKeys = ['适用品类','适用款式','用途','品类','商品类别','type'];
+      const feelKeys = ['手感','风格','特点','标签','描述','说明','备注'];
+      const compKeys = ['成分','面料成分','composition'];
+      const weightKeys = ['克重','重量','gsm'];
+      const colorKeys = ['颜色','色号','color'];
+
+      function findFirstValue(row, keys) {
+        for (const k of keys) {
+          if (k in row && row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== '') {
+            return String(row[k]);
+          }
+        }
+        return '';
+      }
+
+      const prefTokens = preference
+        .split(/[,，。；;、\s]+/)
+        .map(t => t.trim())
+        .filter(t => t.length > 0);
+
+      const results = fabricRows.map((row, index) => {
+        const productCode = findFirstValue(row, codeKeys);
+        const fabricName = findFirstValue(row, nameKeys) || ('布料 ' + (index + 1));
+        const fabricType = findFirstValue(row, typeKeys);
+        const fabricFeel = findFirstValue(row, feelKeys);
+        const fabricComp = findFirstValue(row, compKeys);
+        const fabricWeight = findFirstValue(row, weightKeys);
+        const fabricColor = findFirstValue(row, colorKeys);
+
+        const combinedText = (fabricName + ' ' + fabricType + ' ' + fabricFeel + ' ' + fabricComp + ' ' + fabricColor + ' ' + fabricWeight)
+          .toLowerCase();
+        const rowAllText = (Object.values(row).join(' ')).toLowerCase();
+
+        let score = 0;
+        const reasons = [];
+
+        if (clothingType) {
+          const ct = clothingType;
+          const text = (fabricType + ' ' + fabricFeel).toLowerCase();
+          if (text.includes(ct)) {
+            score += 5;
+            reasons.push('适合 ' + clothingType + ' 类款式');
+          } else if (ct.includes('裙') && /裙|dress/.test(text)) {
+            score += 3;
+            reasons.push('适用于裙装类');
+          } else if (ct.includes('衬衫') && /衬衫|shirt/.test(text)) {
+            score += 3;
+            reasons.push('适用于衬衫类');
+          } else if (ct.includes('裤') && /裤|pants|trouser/.test(text)) {
+            score += 3;
+            reasons.push('适用于裤装类');
+          } else if (ct.includes('外套') && /外套|西装|coat|blazer/.test(text)) {
+            score += 3;
+            reasons.push('适用于外套/西装类');
+          }
+        }
+
+        keywordWeights.forEach(kwItem => {
+          let matched = false;
+          kwItem.kw.forEach(k => {
+            if (preference.includes(k.toLowerCase())) {
+              matched = true;
+            }
+          });
+          if (!matched) return;
+
+          kwItem.kw.forEach(k => {
+            const kLower = k.toLowerCase();
+            if (combinedText.includes(kLower)) {
+              score += kwItem.weight;
+              reasons.push('满足喜好：' + k);
+            }
+          });
+
+          if (kwItem.key === 'summer' && preference.includes('夏') && fabricWeight) {
+            const num = parseFloat(fabricWeight.replace(/[^\d.]/g, '')) || 0;
+            if (num && num <= 160) {
+              score += 2;
+              reasons.push('克重偏轻，适合夏季');
+            }
+          }
+          if (kwItem.key === 'winter' && (preference.includes('冬') || preference.includes('秋')) && fabricWeight) {
+            const num = parseFloat(fabricWeight.replace(/[^\d.]/g, '')) || 0;
+            if (num && num >= 220) {
+              score += 2;
+              reasons.push('克重偏厚，适合秋冬');
+            }
+          }
+        });
+
+        if (/真丝|silk/.test(preference) && /真丝|silk/.test(fabricComp)) {
+          score += 3;
+          reasons.push('成分为真丝，符合材质偏好');
+        }
+        if (/棉麻|亚麻|linen/.test(preference) && /棉|麻|linen/.test(fabricComp)) {
+          score += 3;
+          reasons.push('成分为棉/麻，符合材质偏好');
+        }
+
+        // 4) 对喜好文本中的每个关键词做一次模糊匹配
+        prefTokens.forEach(token => {
+          if (!token) return;
+          if (combinedText.includes(token) || rowAllText.includes(token)) {
+            score += 1;
+            reasons.push('包含偏好关键词：' + token);
+          }
+        });
+
+        return {
+          index,
+          score,
+          productCode,
+          fabricName,
+          fabricType,
+          fabricFeel,
+          fabricComp,
+          fabricWeight,
+          fabricColor,
+          reasons: Array.from(new Set(reasons))
+        };
+      });
+
+      results.sort((a, b) => b.score - a.score);
+
+      const positives = results.filter(r => r.score > 0);
+      const zeros = results.filter(r => r.score === 0);
+      const picked = [];
+
+      positives.forEach(r => {
+        if (picked.length < topN) picked.push(r);
+      });
+      zeros.forEach(r => {
+        if (picked.length < topN) picked.push(r);
+      });
+
+      return picked;
+    }
+
+    function renderRecommendations(recs) {
+      recommendList.innerHTML = '';
+
+      if (!recs.length) {
+        noRecommendHint.textContent = '暂时没有找到特别匹配的布料，你可以：① 调整喜好描述；② 检查表格里的“适用品类/手感/成分”等是否有填。';
+        return;
+      }
+
+      noRecommendHint.textContent = '';
+
+      recs.forEach(rec => {
+        const div = document.createElement('div');
+        div.className = 'recommend-item';
+        const reasonsText = rec.reasons.length
+          ? rec.reasons.join(' · ')
+          : '与客户偏好有一定相似度，可作为备选。';
+
+        let infoLine = '';
+        if (rec.fabricType) infoLine += `<span class="small-tag">适用：${escapeHtml(rec.fabricType)}</span>`;
+        if (rec.fabricComp) infoLine += `<span class="small-tag">成分：${escapeHtml(rec.fabricComp)}</span>`;
+        if (rec.fabricWeight) infoLine += `<span class="small-tag">克重：${escapeHtml(rec.fabricWeight)}</span>`;
+        if (rec.fabricColor) infoLine += `<span class="small-tag">颜色：${escapeHtml(rec.fabricColor)}</span>`;
+
+        div.innerHTML = `
+          <div class="recommend-title">
+            ${escapeHtml(rec.fabricName)}
+            <span class="score">匹配分数：${rec.score}</span>
+          </div>
+          <div style="margin-top:4px; font-size:0.8rem; color:var(--text-soft);">
+            ${infoLine || ''}
+          </div>
+          <div style="margin-top:4px; font-size:0.8rem; color:var(--text-soft);">
+            推荐理由：${escapeHtml(reasonsText)}
+          </div>
+        `;
+        recommendList.appendChild(div);
+      });
+    }
+  </script>
+</body>
+</html>
+

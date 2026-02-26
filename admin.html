@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>管理后台 - 每日小红书面料文案</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #fdf8f3;
+      --card: #fffbf7;
+      --accent: #c45c3e;
+      --accent-soft: #e8a090;
+      --text: #2c2c2c;
+      --text-soft: #5c5c5c;
+      --border: #ecd9d0;
+      --shadow: rgba(196, 92, 62, 0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Noto Sans SC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.65;
+    }
+    .container {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 24px 20px 48px;
+    }
+    header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 0 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    h1 {
+      font-family: "Noto Serif SC", serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    a { color: var(--accent); }
+    .subtitle { font-size: 0.9rem; color: var(--text-soft); }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-top: 18px;
+    }
+    @media (min-width: 980px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+    }
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 4px 20px var(--shadow);
+      border: 1px solid var(--border);
+    }
+    .card h2 {
+      font-family: "Noto Serif SC", serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .row { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 12px; }
+    .row.two { grid-template-columns: 1fr 1fr; }
+    .field label { display: block; font-size: 0.85rem; color: var(--text-soft); margin-bottom: 6px; }
+    .field input, .field textarea, .field select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    .field textarea { min-height: 86px; resize: vertical; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .btn {
+      font-family: "Noto Sans SC", sans-serif;
+      font-size: 0.92rem;
+      padding: 11px 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 10px var(--shadow); }
+    .btn-secondary { background: var(--card); color: var(--accent); border: 1px solid var(--accent); }
+    .btn-danger { background: #8a2e22; color: #fff; }
+    .note {
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: var(--text-soft);
+      background: #f5f0eb;
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .list {
+      margin-top: 10px;
+      border-top: 1px dashed var(--border);
+    }
+    .item {
+      padding: 12px 0;
+      border-bottom: 1px dashed var(--border);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .item .meta { min-width: 0; }
+    .item .title { font-weight: 600; }
+    .item .desc { font-size: 0.85rem; color: var(--text-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 520px; }
+    .pill {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--text-soft);
+      background: #fff;
+      margin-left: 8px;
+    }
+    .pill.on { border-color: rgba(196,92,62,0.35); color: var(--accent); }
+    .hidden { display: none; }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--text);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      opacity: 0;
+      transition: transform 0.25s, opacity 0.25s;
+      z-index: 100;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>管理后台</h1>
+        <div class="subtitle">云端保存/编辑文案，任意设备同步</div>
+      </div>
+      <div class="subtitle">
+        <a href="index.html">← 返回公开页面</a>
+      </div>
+    </header>
+
+    <div class="card" id="setupCard">
+      <h2>首次配置</h2>
+      <div class="note">
+        你需要先创建 Supabase 项目，并执行 <code>supabase.sql</code> 建表。然后把 <code>config.example.js</code> 复制为 <code>config.js</code>，填入 <code>supabaseUrl</code> 与 <code>supabaseAnonKey</code>。
+      </div>
+      <div class="note">
+        建议用 Live Server / 本地服务器打开（<code>http://localhost</code>），不要用 <code>file://</code> 直接双击打开。
+      </div>
+    </div>
+
+    <div class="card hidden" id="loginCard">
+      <h2>登录（仅管理员可编辑）</h2>
+      <form id="loginForm">
+        <div class="row two">
+          <div class="field">
+            <label>邮箱</label>
+            <input id="loginEmail" type="email" autocomplete="email" required />
+          </div>
+          <div class="field">
+            <label>密码</label>
+            <input id="loginPassword" type="password" autocomplete="current-password" required />
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" type="submit">登录</button>
+        </div>
+      </form>
+      <div class="note">
+        账号需要在 Supabase 控制台 Auth 里创建（或开启注册后自行注册）。
+      </div>
+    </div>
+
+    <div class="grid hidden" id="appGrid">
+      <div class="card">
+        <h2>文案列表</h2>
+        <div class="actions" style="margin-top: 0;">
+          <button class="btn btn-secondary" id="refreshBtn" type="button">刷新</button>
+          <button class="btn btn-secondary" id="newBtn" type="button">新增一条</button>
+          <button class="btn btn-secondary" id="importBtn" type="button">导入本地示例(10条)</button>
+          <button class="btn btn-secondary" id="logoutBtn" type="button">退出登录</button>
+        </div>
+        <div class="list" id="postList"></div>
+      </div>
+
+      <div class="card">
+        <h2 id="editorTitle">编辑/新增</h2>
+        <div class="note" style="margin-top: 0;">
+          保存后，公开页会自动从云端读取最新内容并按天轮换。
+        </div>
+        <form id="editorForm">
+          <input type="hidden" id="postId" />
+
+          <div class="row two">
+            <div class="field">
+              <label>排序（越小越靠前）</label>
+              <input id="sortOrder" type="number" value="0" />
+            </div>
+            <div class="field">
+              <label>是否启用（公开页可见）</label>
+              <select id="enabled">
+                <option value="true">启用</option>
+                <option value="false">停用</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label>标题</label>
+              <input id="title" type="text" required />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label>面料名（例：棉（Cotton））</label>
+              <input id="fabric" type="text" required />
+            </div>
+          </div>
+
+          <div class="row two">
+            <div class="field">
+              <label>配图 URL</label>
+              <input id="imageUrl" type="url" placeholder="https://..." />
+            </div>
+            <div class="field">
+              <label>配图说明（可选）</label>
+              <input id="imageAlt" type="text" />
+            </div>
+          </div>
+
+          <div class="note">要点（建议 4 段：感觉/怎么挑/成分怎么看/怎么做）</div>
+          <div class="row two">
+            <div class="field">
+              <label>① Emoji</label>
+              <input id="p0e" type="text" value="👋" />
+            </div>
+            <div class="field">
+              <label>① 小标题</label>
+              <input id="p0t" type="text" value="穿在身上的感觉" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>① 内容</label>
+              <textarea id="p0c"></textarea>
+            </div>
+          </div>
+
+          <div class="row two">
+            <div class="field">
+              <label>② Emoji</label>
+              <input id="p1e" type="text" value="🛒" />
+            </div>
+            <div class="field">
+              <label>② 小标题</label>
+              <input id="p1t" type="text" value="怎么挑" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>② 内容</label>
+              <textarea id="p1c"></textarea>
+            </div>
+          </div>
+
+          <div class="row two">
+            <div class="field">
+              <label>③ Emoji</label>
+              <input id="p2e" type="text" value="📋" />
+            </div>
+            <div class="field">
+              <label>③ 小标题</label>
+              <input id="p2t" type="text" value="成分表怎么看" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>③ 内容</label>
+              <textarea id="p2c"></textarea>
+            </div>
+          </div>
+
+          <div class="row two">
+            <div class="field">
+              <label>④ Emoji</label>
+              <input id="p3e" type="text" value="🏭" />
+            </div>
+            <div class="field">
+              <label>④ 小标题</label>
+              <input id="p3t" type="text" value="是怎么做出来的" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>④ 内容</label>
+              <textarea id="p3c"></textarea>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label>标签（空格分隔，例：#面料知识 #服装成分）</label>
+              <input id="tags" type="text" />
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-primary" id="saveBtn" type="submit">保存</button>
+            <button class="btn btn-secondary" id="resetBtn" type="button">清空表单</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">已保存</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="cloud.js"></script>
+  <script src="data.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
+
