@@ -217,6 +217,8 @@
       letter-spacing: 0.02em;
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -320,6 +322,13 @@
     let fabricRows = [];
     let fabricColumns = [];
 
+    let supabase = null;
+    if (window.APP_CONFIG && window.APP_CONFIG.supabaseUrl && window.APP_CONFIG.supabaseAnonKey) {
+      try {
+        supabase = window.supabase.createClient(window.APP_CONFIG.supabaseUrl, window.APP_CONFIG.supabaseAnonKey);
+      } catch (e) { console.warn('Supabase init failed', e); }
+    }
+
     const fileInput = document.getElementById('fileInput');
     const tableContainer = document.getElementById('tableContainer');
     const noFabricHint = document.getElementById('noFabricHint');
@@ -337,9 +346,38 @@
       tableContainer.style.display = 'none';
       fabricCountEl.textContent = '0 条';
       noFabricHint.style.display = 'block';
+      noFabricHint.textContent = '还没有上传布料表格。若已保存过，刷新页面会自动加载。';
       recommendList.innerHTML = '';
-      noRecommendHint.textContent = '还没有上传布料表格。';
+      noRecommendHint.textContent = '还没有生成推荐。填写客户信息后点击“生成推荐布料”。';
     });
+
+    async function loadFromServer() {
+      if (!supabase) return;
+      try {
+        const { data, error } = await supabase.from('fabric_product_list').select('data').eq('id', 'default').single();
+        if (error || !data || !data.data) return;
+        const payload = data.data;
+        const rows = Array.isArray(payload.rows) ? payload.rows : (Array.isArray(payload) ? payload : []);
+        const cols = Array.isArray(payload.columns) && payload.columns.length ? payload.columns : inferColumns(rows);
+        if (rows.length === 0) return;
+        fabricRows = rows;
+        fabricColumns = cols;
+        renderFabricTable();
+        fabricCountEl.textContent = fabricRows.length + ' 条（已从服务器加载）';
+        noFabricHint.style.display = 'none';
+        noRecommendHint.textContent = '还没有生成推荐。填写客户信息后点击“生成推荐布料”。';
+      } catch (e) { console.warn('Load fabric list from server failed', e); }
+    }
+
+    async function saveToServer(rows, columns) {
+      if (!supabase || !Array.isArray(rows)) return;
+      try {
+        await supabase.from('fabric_product_list').upsert(
+          { id: 'default', data: { rows, columns: columns || inferColumns(rows) }, updated_at: new Date().toISOString() },
+          { onConflict: 'id' }
+        );
+      } catch (e) { console.warn('Save fabric list to server failed', e); }
+    }
 
     recommendBtn.addEventListener('click', () => {
       if (!fabricRows.length) {
@@ -383,6 +421,9 @@
           noFabricHint.style.display = fabricRows.length ? 'none' : 'block';
           noRecommendHint.textContent = '还没有生成推荐。填写客户信息后点击“生成推荐布料”。';
           recommendList.innerHTML = '';
+          saveToServer(fabricRows, fabricColumns);
+          noFabricHint.textContent = fabricRows.length ? '已保存到服务器，其他设备或浏览器打开本页即可看到。' : '还没有上传布料表格。';
+          if (fabricRows.length) noFabricHint.style.display = 'block';
         };
         reader.readAsBinaryString(file);
         return;
@@ -418,6 +459,9 @@
         noFabricHint.style.display = fabricRows.length ? 'none' : 'block';
         noRecommendHint.textContent = '还没有生成推荐。填写客户信息后点击“生成推荐布料”。';
         recommendList.innerHTML = '';
+        saveToServer(fabricRows, fabricColumns);
+        noFabricHint.textContent = fabricRows.length ? '已保存到服务器，其他设备或浏览器打开本页即可看到。' : '还没有上传布料表格。';
+        if (fabricRows.length) noFabricHint.style.display = 'block';
       };
 
       reader.readAsArrayBuffer(file);
@@ -840,6 +884,9 @@
         recommendList.appendChild(div);
       });
     }
+
+    // 页面加载时尝试从服务器拉取已保存的布料表
+    loadFromServer();
   </script>
 </body>
 </html>

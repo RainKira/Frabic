@@ -56,3 +56,29 @@ to authenticated
 using (true)
 with check (true);
 
+
+-- 客户喜好推荐页：布料产品列表（上传一次，全站可见）
+create table if not exists public.fabric_product_list (
+  id text primary key default 'default',
+  updated_at timestamptz not null default now(),
+  -- data: { rows: [...], columns: [...] }
+  data jsonb not null default '{"rows":[],"columns":[]}'::jsonb
+);
+
+alter table public.fabric_product_list enable row level security;
+
+-- 任何人可读（未登录也能看到已保存的布料表）
+drop policy if exists "public read fabric product list" on public.fabric_product_list;
+create policy "public read fabric product list"
+on public.fabric_product_list
+for select
+using (true);
+
+-- 任何人可写（上传即覆盖；若需仅管理员可写，可改为 to authenticated）
+drop policy if exists "public upsert fabric product list" on public.fabric_product_list;
+create policy "public upsert fabric product list"
+on public.fabric_product_list
+for all
+using (true)
+with check (true);
+
