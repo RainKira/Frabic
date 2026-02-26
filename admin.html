@@ -146,17 +146,32 @@
       z-index: 100;
     }
     .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .site-title-bar {
+      background: var(--accent);
+      color: #fff;
+      text-align: center;
+      padding: 10px 16px;
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
   </style>
 </head>
 <body>
+  <div class="site-title-bar">FONCIN 凤城辅助系统</div>
   <div class="container">
     <header>
       <div>
         <h1>管理后台</h1>
         <div class="subtitle">云端保存/编辑文案，任意设备同步</div>
+        <div class="subtitle" style="margin-top: 6px;">
+          <a href="index.html" style="color: var(--accent); text-decoration: underline; margin-right: 12px;">每日文案页</a>
+          <a href="preference.html" style="color: var(--accent); text-decoration: underline; margin-right: 12px;">客户喜好推荐</a>
+          <a href="admin.html" style="color: var(--accent); text-decoration: underline;">当前：管理后台</a>
+        </div>
       </div>
       <div class="subtitle">
-        <a href="index.html">← 返回公开页面</a>
+        <a href="index.html">← 返回每日文案页</a>
       </div>
     </header>
 

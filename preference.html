@@ -207,14 +207,29 @@
         grid-template-columns: minmax(0, 1fr);
       }
     }
+    .site-title-bar {
+      background: var(--accent);
+      color: #fff;
+      text-align: center;
+      padding: 10px 16px;
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
+  <div class="site-title-bar">FONCIN 凤城辅助系统</div>
   <div class="container">
     <header>
       <h1>面料客户喜好偏向 · 推荐助手</h1>
       <p class="subtitle">上传你的布料表格，记录客户偏好，一键生成推荐布料清单</p>
+      <p class="subtitle" style="margin-top: 6px;">
+        <a href="index.html" style="color: var(--accent); text-decoration: underline; margin-right: 12px;">每日文案页</a>
+        <a href="preference.html" style="color: var(--accent); text-decoration: underline; margin-right: 12px;">当前：客户喜好推荐</a>
+        <a href="admin.html" style="color: var(--accent); text-decoration: underline;">管理后台</a>
+      </p>
     </header>
 
     <section class="card">
@@ -593,6 +608,7 @@
 
       const clothingType = (clothingTypeFree || clothingTypeSelect).toLowerCase();
       const preference = preferenceText.toLowerCase();
+      const wantsPureCotton = /纯棉|全棉|100%棉/.test(preferenceText);
 
       const keywordWeights = [
         { kw: ['柔软','软糯','软'], key: 'soft', weight: 3 },
@@ -637,6 +653,8 @@
         const fabricComp = findFirstValue(row, compKeys);
         const fabricWeight = findFirstValue(row, weightKeys);
         const fabricColor = findFirstValue(row, colorKeys);
+
+        const isPureCotton = checkPureCotton(fabricComp);
 
         const combinedText = (fabricName + ' ' + fabricType + ' ' + fabricFeel + ' ' + fabricComp + ' ' + fabricColor + ' ' + fabricWeight)
           .toLowerCase();
@@ -727,14 +745,20 @@
           fabricComp,
           fabricWeight,
           fabricColor,
+          isPureCotton,
           reasons: Array.from(new Set(reasons))
         };
       });
 
       results.sort((a, b) => b.score - a.score);
 
-      const positives = results.filter(r => r.score > 0);
-      const zeros = results.filter(r => r.score === 0);
+      let positives = results.filter(r => r.score > 0);
+      let zeros = results.filter(r => r.score === 0);
+
+      if (wantsPureCotton) {
+        positives = positives.filter(r => r.isPureCotton);
+        zeros = zeros.filter(r => r.isPureCotton);
+      }
       const picked = [];
 
       positives.forEach(r => {
@@ -747,11 +771,42 @@
       return picked;
     }
 
+    // 判断成分是否为“纯棉”：100%棉 / 全棉 / 棉含量>=95%且无其他纤维
+    function checkPureCotton(fabricComp) {
+      if (!fabricComp) return false;
+      const s = String(fabricComp).replace(/\s/g, '');
+      if (!s) return false;
+      if (/全棉/.test(s)) return true;
+      if (/100%?棉/.test(s)) return true;
+
+      const segs = s.match(/(\d+(?:\.\d+)?)%[^，、,；;]+/g);
+      if (!segs || !segs.length) return false;
+
+      let cottonPct = 0;
+      let hasOther = false;
+      segs.forEach(seg => {
+        const m = seg.match(/(\d+(?:\.\d+)?)/);
+        const pct = m ? parseFloat(m[1]) : 0;
+        if (/棉/.test(seg)) {
+          cottonPct += pct;
+        } else {
+          if (pct > 0) hasOther = true;
+        }
+      });
+
+      return cottonPct >= 95 && !hasOther;
+    }
+
     function renderRecommendations(recs) {
       recommendList.innerHTML = '';
 
       if (!recs.length) {
-        noRecommendHint.textContent = '暂时没有找到特别匹配的布料，你可以：① 调整喜好描述；② 检查表格里的“适用品类/手感/成分”等是否有填。';
+        const preferenceText = (document.getElementById('preferenceText').value || '').trim();
+        if (/纯棉|全棉|100%棉/.test(preferenceText)) {
+          noRecommendHint.textContent = '根据“纯棉/全棉”的要求，当前表格里没有识别到 100% 棉（或全棉、棉≥95% 且无其他成分）的布料，请检查或补充成分信息后再试。';
+        } else {
+          noRecommendHint.textContent = '暂时没有找到特别匹配的布料，你可以：① 调整喜好描述；② 检查表格里的“适用品类/手感/成分”等是否有填。';
+        }
         return;
       }
 
