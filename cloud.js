@@ -66,12 +66,43 @@ async function loadPostsPreferCloud() {
   return [];
 }
 
+/** 获取当前登录会话（未登录返回 null） */
+async function getSession() {
+  const cfg = getAppConfig();
+  if (!hasSupabaseConfig(cfg)) return null;
+  const client = createSupabaseClient(cfg);
+  const { data } = await client.auth.getSession();
+  return data?.session ?? null;
+}
+
+/** 未登录则跳转到登录页，登录则返回 session */
+async function requireAuth() {
+  const session = await getSession();
+  if (session) return session;
+  const redirect = "login.html?redirect=" + encodeURIComponent(window.location.pathname + window.location.search);
+  window.location.replace(redirect);
+  return null;
+}
+
+/** 登出并跳转登录页 */
+async function signOut() {
+  const cfg = getAppConfig();
+  if (hasSupabaseConfig(cfg)) {
+    const client = createSupabaseClient(cfg);
+    await client.auth.signOut();
+  }
+  window.location.replace("login.html");
+}
+
 // 暴露给页面使用
 window.__cloud = {
   getAppConfig,
   hasSupabaseConfig,
   createSupabaseClient,
   fetchPostsFromSupabase,
-  loadPostsPreferCloud
+  loadPostsPreferCloud,
+  getSession,
+  requireAuth,
+  signOut
 };
 

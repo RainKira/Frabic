@@ -101,32 +101,19 @@ async function main() {
   const cfg = window.__cloud?.getAppConfig?.() || {};
   const hasCfg = window.__cloud?.hasSupabaseConfig?.(cfg);
   const setupCard = $("setupCard");
-  const loginCard = $("loginCard");
   const appGrid = $("appGrid");
 
   if (!hasCfg) {
     setupCard.classList.remove("hidden");
-    loginCard.classList.add("hidden");
     appGrid.classList.add("hidden");
     return;
   }
 
   setupCard.classList.add("hidden");
+  await window.__cloud.requireAuth();
 
+  appGrid.classList.remove("hidden");
   const client = window.__cloud.createSupabaseClient(cfg);
-
-  async function refreshSessionAndUi() {
-    const { data } = await client.auth.getSession();
-    const session = data?.session || null;
-    if (!session) {
-      loginCard.classList.remove("hidden");
-      appGrid.classList.add("hidden");
-    } else {
-      loginCard.classList.add("hidden");
-      appGrid.classList.remove("hidden");
-    }
-    return session;
-  }
 
   let cachedPosts = [];
 
@@ -188,11 +175,11 @@ async function main() {
     });
   };
 
-  $("logoutBtn").onclick = async function () {
-    await client.auth.signOut();
-    await refreshSessionAndUi();
-    showToast("已退出");
+  $("logoutBtn").onclick = function () {
+    window.__cloud.signOut();
   };
+  const headerLogout = $("headerLogout");
+  if (headerLogout) headerLogout.onclick = function (e) { e.preventDefault(); window.__cloud.signOut(); };
 
   $("resetBtn").onclick = function () {
     clearEditor();
@@ -207,22 +194,6 @@ async function main() {
     if (act === "edit") {
       const hit = cachedPosts.find((x) => x.id === id);
       if (hit) setEditor(hit);
-    }
-  };
-
-  $("loginForm").onsubmit = async function (e) {
-    e.preventDefault();
-    const email = $("loginEmail").value.trim();
-    const password = $("loginPassword").value;
-    try {
-      const { error } = await client.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      await refreshSessionAndUi();
-      await loadPosts();
-      showToast("登录成功");
-    } catch (err) {
-      console.warn(err);
-      showToast("登录失败");
     }
   };
 
@@ -271,10 +242,7 @@ async function main() {
     }
   };
 
-  const session = await refreshSessionAndUi();
-  if (session) {
-    await loadPosts();
-  }
+  await loadPosts();
 }
 
 main().catch((e) => console.warn(e));
